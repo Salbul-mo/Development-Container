@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  development-container:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USER_PASSWORD=${USER_PASSWORD}
+        - USER_NAME=${USER_NAME}
+        - USER_GROUP=${USER_GROUP}
+        - GRADLE_VERSION=${GRADLE_VERSION}
+        - GRADLE_HOME=${GRADLE_HOME}
+        - MAVEN_VERSION=${MAVEN_VERSION}
+        - MAVEN_HOME=${MAVEN_HOME}
+    container_name: development-container
+    hostname: development-container
+    privileged: true
+    tmpfs:
+      - /tmp
+      - /run
+    environment:
+      - GRADLE_VERSION=${GRADLE_VERSION}
+      - GRADLE_HOME=${GRADLE_HOME}
+      - MAVEN_VERSION=${MAVEN_VERSION}
+      - MAVEN_HOME=${MAVEN_HOME}
+    volumes:
+      - ${WORKSPACE_DIR}:/home/workspace
+      - ${WORKSPACE_LOG_DIR}:/var/log
+      - ./scripts:/home/workspace/scripts
+    ports:
+      - "80:80"
+      - "8088:8088"
+      - "3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"] # 또는 실제 사용하는 포트
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+      MYSQL_INIT_USER: ${MYSQL_INIT_USER}
+      MYSQL_INIT_PASSWORD: ${MYSQL_INIT_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - ${MYSQL_DIR}:/var/lib/mysql
+      - ${MYSQL_LOG_DIR}:/var/log/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"] # 또는 실제 사용하는 포트
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

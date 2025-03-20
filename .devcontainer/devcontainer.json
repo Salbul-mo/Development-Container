@@ -1,0 +1,43 @@
+{
+  "name": "Development Container",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "development-container",
+  "workspaceFolder": "/home/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "redhat.java",
+        "vscjava.vscode-java-pack",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        "formulahendry.code-runner",
+        "visualstudioexptteam.vscodeintellicode",
+        "vmware.vscode-spring-boot",
+        "vscjava.vscode-gradle",
+        "vscjava.vscode-java-debug",
+        "vscjava.vscode-java-test",
+        "cweijan.vscode-mysql-client2"
+      ],
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "explicit",
+          "source.organizeImports": "explicit"
+        }
+      },
+      "java.configuration.runtimes": [
+        {
+          "name": "JavaSE-17",
+          "path": "/usr/lib/jvm/java-17-openjdk"
+        }
+      ]
+    }
+  },
+  "postCreateCommand": "[ -f package.json ] && npm install || (echo 'No package.json found, creating one...' && npm init -y && npm install)",
+  "remoteUser": "mo"
+}
