@@ -1,0 +1,109 @@
+# docker-compose.yml
+# This file defines the services for the full stack development environment.
+version: "3.8" # Specify docker-compose version
+
+services:
+  # Service: development-container
+  development-container:
+    build:
+      context: . # Build context is the current directory
+      dockerfile: Dockerfile # Use the provided Dockerfile
+      # Pass build arguments which are defined in the .env file for a secure and customizable build.
+      args:
+        - DEV_USER_PASSWORD=${DEV_USER_PASSWORD}
+        - DEV_USER_NAME=${DEV_USER_NAME}
+        - DEV_USER_GROUP=${DEV_USER_GROUP}
+        # If need Gradle or Maven
+        # - GRADLE_VERSION=${GRADLE_VERSION}
+        # - GRADLE_HOME=${GRADLE_HOME}
+        # - MAVEN_VERSION=${MAVEN_VERSION}
+        # - MAVEN_HOME=${MAVEN_HOME}
+    container_name: development-container # Container name for easy reference
+    hostname: development-container # Hostname inside the container
+    privileged: true # Giving privileged mode for Docker-in-Docker scenarios (use with caution)
+    # tmpfs mounts for directories that need to be in-memory for performance or security reasons
+    tmpfs:
+      - /tmp
+      - /run
+    # environment:
+    # Environment variables for runtime, loaded from the .env file.
+    # If need Gradle or Maven
+    # - GRADLE_VERSION=${GRADLE_VERSION}
+    # - GRADLE_HOME=${GRADLE_HOME}
+    # - MAVEN_VERSION=${MAVEN_VERSION}
+    # - MAVEN_HOME=${MAVEN_HOME}
+    volumes:
+      # Mapping a directory from an external SSD for easy portability
+      # Ensure EXTERNAL_SSD_PATH points to your external storage location in the .env file.
+      - ${DEV_WORKSPACE_DIR}:/home/workspace
+      - ${DEV_WORKSPACE_LOG_DIR}:/var/log
+      # Mapping local scripts into the container's workspace for development utilities.
+      - ./scripts:/home/workspace/scripts
+    ports:
+      # Expose required ports:
+      # Port 80 for web server (nginx)
+      # Port 8088 and 3000 for other development tools
+      - "80:80"
+      - "${DEV_PORT}:8088"
+    restart: unless-stopped # Restart policy for stability
+    healthcheck:
+      # Health check to determine container's responsiveness
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s # Give container time to start up
+
+    networks:
+      app-network: # Connect to a custom network for isolated communication
+    tty: true
+    stdin_open: true
+
+  # Service: database using MariaDB
+  database:
+    image: mariadb:latest # Using MariaDB as the data storage solution
+    container_name: database # Container name for the database service
+    environment:
+      # Environment variables for MariaDB configuration loaded from the .env file.
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    ports:
+      # MariaDB listens on 3306 inside the container, mapped to 3307 on the host.
+      - "${DB_PORT}:3306"
+    volumes:
+      # Persist data on the external SSD for portability and backup.
+      - ${DB_DIR}:/var/lib/mysql
+      # Optional: Map a directory for database logs.
+      - ${DB_LOG_DIR}:/var/log/mysql
+    restart: unless-stopped
+    healthcheck:
+      # Health check to confirm the database is ready to accept connections.
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "--password=${DB_ROOT_PASSWORD}",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      app-network: # Connect to the same isolated network as the development container
+
+# Define a custom network for secure and isolated communication between containers.
+networks:
+  app-network:
+    driver: bridge # Using the bridge network driver which is simple and standard
+    # Optional extra network settings can be added here for enhanced security if needed.
+    # ipam:
+    #   config:
+    #     - subnet: 172.28.0.0/16
+    #     - gateway: 172.28.0.1
+    #     # Define a subnet for the network with non-standard IP adresses
